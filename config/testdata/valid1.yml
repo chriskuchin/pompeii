@@ -1,0 +1,22 @@
+---
+services:
+  service1:
+    listener-rule-arn: listener-rule-arn-service1
+    canary:
+      tg-arn: tg-arn-canary-service1
+      ecs-service: service1-canary
+    primary:
+      tg-arn: tg-arn-primary-service1
+      ecs-service: service1
+workflows:
+  validate:
+    - action: validate
+      target: task
+    - action: validate
+      target: prompt
+    - action: shift
+      target: primary
+      ratio: 100
+    - action: update
+      target: canary
+      count: 1
