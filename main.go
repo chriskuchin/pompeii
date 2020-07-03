@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/chriskuchin/pompeii/config"
@@ -48,6 +49,7 @@ func main() {
 				},
 				Action: func(c *cli.Context) error {
 					settings := initClient(c)
+					fmt.Println(settings)
 					workflow.ProcessWorkflow(&config.Workflow{
 						Config:  settings,
 						Service: c.String("service"),
