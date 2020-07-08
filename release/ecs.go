@@ -104,7 +104,6 @@ func (c *Client) UpdateService(service, pool string, state *config.ServiceState)
 }
 
 func (c *Client) RunTask(service, task, container string, command []string) (string, error) {
-	log.Info(service, task)
 	input := &ecs.RunTaskInput{
 		Cluster:        aws.String(c.Config.Services[service].ClusterARN),
 		TaskDefinition: aws.String(task),
@@ -130,7 +129,6 @@ func (c *Client) RunTask(service, task, container string, command []string) (str
 }
 
 func (c *Client) runTask(service string, taskInput *ecs.RunTaskInput) (string, error) {
-	log.Info(taskInput)
 	svc := c.ecsSvc[service]
 
 	result, err := svc.RunTask(taskInput)
@@ -166,7 +164,7 @@ func (c *Client) runTask(service string, taskInput *ecs.RunTaskInput) (string, e
 		return "", err
 	}
 
-	log.Debug(result)
+	log.Info(result)
 
 	return *result.Tasks[0].TaskArn, nil
 }
