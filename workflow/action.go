@@ -26,7 +26,7 @@ type (
 	}
 )
 
-func ProcessWorkflow(workflow *config.Workflow) {
+func ProcessWorkflow(workflow *config.Workflow) error {
 	processor := &Processor{
 		workflow:   workflow,
 		client:     release.NewClient(workflow.Config),
@@ -44,7 +44,7 @@ func ProcessWorkflow(workflow *config.Workflow) {
 			if !proceed {
 				log.Error("Pool Update Failed!!")
 				processor.rollbackToLatestCheckpoint()
-				return
+				return fmt.Errorf("Failed to update pool: rolled back")
 			}
 
 		case config.TrafficShift:
@@ -54,7 +54,7 @@ func ProcessWorkflow(workflow *config.Workflow) {
 			if !proceed {
 				log.Error("Traffic Shift Failed!!")
 				processor.rollbackToLatestCheckpoint()
-				return
+				return fmt.Errorf("Failed to shift traffic: rolled back")
 			}
 
 		case config.ValidatePool:
@@ -65,13 +65,15 @@ func ProcessWorkflow(workflow *config.Workflow) {
 			if !proceed {
 				log.Error("Validation Failed!!")
 				processor.rollbackToLatestCheckpoint()
-				return
+				return fmt.Errorf("Failed to validate pools: rolled back")
 			}
 
 		default:
 			log.Errorf("Undefined ActionType: %s", action.Type)
 		}
 	}
+
+	return nil
 }
 
 func (p *Processor) getInitialCheckpoint() {

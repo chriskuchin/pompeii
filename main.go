@@ -50,7 +50,7 @@ func main() {
 				Action: func(c *cli.Context) error {
 					settings := initClient(c)
 					fmt.Println(settings)
-					workflow.ProcessWorkflow(&config.Workflow{
+					return workflow.ProcessWorkflow(&config.Workflow{
 						Config:  settings,
 						Service: c.String("service"),
 						Steps:   settings.Workflows[c.String("workflow")],
@@ -59,7 +59,6 @@ func main() {
 							Count:   c.Int64("count"),
 						},
 					})
-					return nil
 				},
 			},
 		},
