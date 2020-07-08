@@ -240,6 +240,7 @@ func (c *Client) calcuateTaskState(taskInfo *ecs.DescribeTasksOutput) *config.Ta
 
 func (c *Client) StartAndMonitorTask(service, task, container string, command []string) bool {
 	taskARN, _ := c.RunTask(service, task, container, command)
+	time.Sleep(30 * time.Second)
 	return c.monitorTaskRun(service, taskARN)
 }
 
