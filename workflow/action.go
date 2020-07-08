@@ -121,7 +121,6 @@ func (p *Processor) handleShiftAction(action *config.Action) bool {
 		weights.Canary = 100 - action.Ratio
 	}
 
-	log.Info("Ratio: ", weights)
 	err := p.client.UpdateWeights(p.workflow.Service, weights)
 
 	return err == nil

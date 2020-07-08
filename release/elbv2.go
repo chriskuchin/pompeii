@@ -85,8 +85,6 @@ func (c *Client) UpdateWeights(service string, weights *config.ServiceWeights) e
 		RuleArn: aws.String(c.Config.GetListenerRuleARN(service)),
 	}
 
-	log.Info("Actions: ", rule.Actions)
-
 	result, err := svc.ModifyRule(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
