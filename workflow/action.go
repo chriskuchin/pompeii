@@ -147,7 +147,7 @@ func (p *Processor) handleValidationAction(action *config.Action) bool {
 
 	case "task":
 		return !p.client.StartAndMonitorTask(p.workflow.Service, p.client.Config.GetServiceValidationTask(p.workflow.Service), p.client.Config.Services[p.workflow.Service].ValidationTaskContainer, action.Command)
+	default:
+		return false
 	}
-
-	return false
 }

@@ -53,7 +53,7 @@ func (c *Client) GetCurrentServiceInfo(service, pool string) *ecs.Service {
 		return nil
 	}
 
-	log.Debug(result)
+	log.Debugf("[ecs.GetCurrentServiceInfo] %+v", result)
 
 	return result.Services[0]
 }
@@ -61,11 +61,13 @@ func (c *Client) GetCurrentServiceInfo(service, pool string) *ecs.Service {
 func (c *Client) UpdateService(service, pool string, state *config.ServiceState) {
 	svc := c.ecsSvc[service]
 	input := &ecs.UpdateServiceInput{
-		Service:        aws.String(c.Config.Services[service].Canary.Service),
+		Service:        aws.String(c.Config.GetECSServiceName(service, pool)),
 		TaskDefinition: aws.String(state.TaskDef),
 		Cluster:        aws.String(c.Config.Services[service].ClusterARN),
 		DesiredCount:   aws.Int64(state.Count),
 	}
+
+	log.Infof("[ecs.UpdateService] Updating service: %s state: %+v input: %+v", service, state, input)
 
 	result, err := svc.UpdateService(input)
 	if err != nil {
@@ -100,7 +102,7 @@ func (c *Client) UpdateService(service, pool string, state *config.ServiceState)
 		return
 	}
 
-	log.Debug(result)
+	log.Debugf("[ecs.UpdateService] %+v", result)
 }
 
 func (c *Client) RunTask(service, task, container string, command []string) (string, error) {
@@ -164,11 +166,12 @@ func (c *Client) runTask(service string, taskInput *ecs.RunTaskInput) (string, e
 		return "", err
 	}
 
-	log.Info(result)
+	log.Debugf("[ecs.runTask] %+v", result)
 
 	return *result.Tasks[0].TaskArn, nil
 }
 
+// DescribeTask get the tasks current info
 func (c *Client) DescribeTask(service, taskARN string) (*config.TaskState, error) {
 	svc := c.ecsSvc[service]
 	input := &ecs.DescribeTasksInput{
@@ -201,7 +204,7 @@ func (c *Client) DescribeTask(service, taskARN string) (*config.TaskState, error
 		return nil, err
 	}
 
-	log.Debug(result)
+	log.Debugf("[ecs.DescribeTask] ", result)
 
 	return c.calcuateTaskState(result), nil
 }
@@ -232,10 +235,10 @@ func (c *Client) calcuateTaskState(taskInfo *ecs.DescribeTasksOutput) *config.Ta
 			}
 		}
 	}
-	log.Info(state)
 	return state
 }
 
+// StartAndMonitorTask launch a task and monitor it's runtime and return true if it failed
 func (c *Client) StartAndMonitorTask(service, task, container string, command []string) bool {
 	taskARN, _ := c.RunTask(service, task, container, command)
 	time.Sleep(30 * time.Second)
@@ -251,7 +254,7 @@ func (c *Client) monitorTaskRun(service, taskARN string) bool {
 		state, _ = c.DescribeTask(service, taskARN)
 	}
 
-	log.Infof("%+v", state)
+	log.Debugf("[ecs.StartAndMonitorTask] %+v", state)
 
 	return state != nil && state.Failed
 }
@@ -293,10 +296,12 @@ func getActiveDeployment(info *ecs.Service) *ecs.Deployment {
 	return nil
 }
 
+// MonitorServiceDeployment waits for a deployment to complete before returing true if it succeeds and false if it doesn't
 func (c *Client) MonitorServiceDeployment(service, pool string) bool {
+	log.Infof("[ecs.MonitorServiceDeployment] Monitoring deployment of service: %s to the %s pool", service, pool)
 	for {
 		info := c.GetCurrentServiceInfo(service, pool)
-		log.Debugf("%#v\n", info.Deployments)
+		log.Debugf("[ecs.MonitorServiceDeployment] %#v\n", info.Deployments)
 
 		if len(info.Deployments) == 1 {
 			return true
@@ -304,32 +309,37 @@ func (c *Client) MonitorServiceDeployment(service, pool string) bool {
 
 		deployment := getActiveDeployment(info)
 		if deployment == nil {
-			log.Errorf("Failed to locate the Primary deployment: %#v", info.Deployments)
+			log.Errorf("[ecs.MonitorServiceDeployment] Failed to locate the Primary deployment: %#v", info.Deployments)
 			return false
 		}
 
 		if time.Now().Sub(*deployment.CreatedAt) > c.Config.Services[service].Timeout {
-			log.Errorf("Deployment Timed out: %v", c.Config.Services[service].Timeout)
+			log.Errorf("[ecs.MonitorServiceDeployment] Deployment Timed out: %v", c.Config.Services[service].Timeout)
 			return false
 		}
 
-		log.Info("Waiting for deployment to complete, sleeping")
+		log.Infof("[ecs.MonitorServiceDeployment] Waiting for deployment to complete, service: %s pool: %s sleeping", service, pool)
 		time.Sleep(30 * time.Second)
 	}
 }
 
 // Deploy deploys the given service and waits for the deployment to complete
 func (c *Client) Deploy(service, pool string, state *config.ServiceState) bool {
+	log.Infof("[ecs.Deploy] Starting Deployment of %s to %s: Desired State: %+v", service, pool, state)
 	rollbackState := c.GetCurrentServiceState(service, pool)
+	log.Infof("[ecs.Deploy] Calculated rollback state: %+v", rollbackState)
 
 	c.UpdateService(service, pool, state)
+	log.Infof("[ecs.Deploy] Service update started: %s %s %+v", service, pool, state)
 
 	result := c.MonitorServiceDeployment(service, pool)
 
 	if result == false {
+		log.Infof("[ecs.Deploy] Deployment Failed, rolling back update: %+v", rollbackState)
 		c.UpdateService(service, pool, rollbackState)
 		return false
 	}
 
+	log.Infof("[ecs.Deploy] Succesfully deployed: %+v", c.GetCurrentServiceState(service, pool))
 	return true
 }

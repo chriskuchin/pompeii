@@ -6,6 +6,7 @@ import (
 
 	"github.com/chriskuchin/pompeii/config"
 	"github.com/chriskuchin/pompeii/workflow"
+	"github.com/prometheus/common/log"
 	"github.com/urfave/cli/v2"
 )
 
@@ -71,12 +72,13 @@ func initClient(c *cli.Context) *config.Config {
 	filePath := c.String("config-file")
 	s3Bucket := c.String("s3-bucket")
 
+	log.Debugf("[InitClient] Loading config. path: %s bucket: %s", filePath, s3Bucket)
+
 	clientConfig := &config.Config{}
 	if s3Bucket != "" {
 		clientConfig = config.NewConfigFromS3(filePath, s3Bucket)
 	} else {
 		clientConfig = config.NewConfigFromFile(filePath)
-
 	}
 
 	return clientConfig

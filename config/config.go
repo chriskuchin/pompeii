@@ -149,3 +149,13 @@ func (c *Config) GetECSService(service, pool string) string {
 func (c *Config) GetServiceValidationTask(service string) string {
 	return c.Services[service].ValidationTask
 }
+
+func (c *Config) GetECSServiceName(service, pool string) string {
+	if strings.ToLower(pool) == "canary" {
+		return c.Services[service].Canary.Service
+	} else if strings.ToLower(pool) == "primary" {
+		return c.Services[service].Primary.Service
+	}
+
+	return ""
+}
